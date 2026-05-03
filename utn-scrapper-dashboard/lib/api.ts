@@ -108,4 +108,50 @@ export const api = {
       return data || [];
     },
   },
+
+  tasks: {
+    async getUpcoming(days: number = 7) {
+      const now = new Date();
+      const future = new Date();
+      future.setDate(future.getDate() + days);
+
+      const { data: activities, error } = await supabase
+        .from('Activity')
+        .select('*, Course(name, externalId)')
+        .gte('dueDate', now.toISOString())
+        .lte('dueDate', future.toISOString())
+        .order('dueDate', { ascending: true });
+
+      if (error) throw error;
+
+      const tasks = (activities || []).map(a => ({
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        type: a.type,
+        dueDate: a.dueDate ? new Date(a.dueDate) : null,
+        status: a.status,
+        url: a.url,
+        courseName: (a.Course as any)?.name || 'Unknown',
+        courseId: a.courseId,
+      }));
+
+      // Get materials for each course
+      const courseIds = [...new Set(tasks.map(t => t.courseId))];
+      const materialsMap = new Map();
+
+      for (const courseId of courseIds) {
+        const { data: materials } = await supabase
+          .from('Material')
+          .select('*')
+          .eq('courseId', courseId);
+        materialsMap.set(courseId, materials || []);
+      }
+
+      return tasks.map(t => ({
+        ...t,
+        materials: materialsMap.get(t.courseId) || [],
+      }));
+    },
+  },
 };

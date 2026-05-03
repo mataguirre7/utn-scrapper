@@ -36,6 +36,7 @@ export default function RootLayout({
             </Link>
             <div className="flex gap-6">
               <Link href="/" className="hover:text-blue-600">Dashboard</Link>
+              <Link href="/tasks" className="font-semibold text-red-600 hover:text-red-700">Mis Tareas</Link>
               <Link href="/courses" className="hover:text-blue-600">Cursos</Link>
               <Link href="/calendar" className="hover:text-blue-600">Calendario</Link>
               <Link href="/changes" className="hover:text-blue-600">Cambios</Link>
