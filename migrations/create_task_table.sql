@@ -1,8 +1,8 @@
 -- Create Task table for subtasks within activities
 CREATE TABLE IF NOT EXISTS "Task" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id TEXT PRIMARY KEY,
   "externalId" TEXT NOT NULL UNIQUE,
-  "activityId" UUID NOT NULL REFERENCES "Activity"(id) ON DELETE CASCADE,
+  "activityId" TEXT NOT NULL REFERENCES "Activity"(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT,
   type TEXT,
