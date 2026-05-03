@@ -1,6 +1,7 @@
+import { randomUUID } from 'crypto';
 import { config } from '../config/env';
 import { logger } from '../utils/logger';
-import { getPrisma } from '../db/prisma';
+import { supabase } from '../db/supabase';
 import { hashObject } from '../utils/hash';
 
 export interface NotificationMessage {
@@ -51,8 +52,6 @@ export async function notifyChanges(notifications: NotificationMessage[]): Promi
     return;
   }
 
-  const prisma = getPrisma();
-
   const emoji: { [key: string]: string } = {
     low: '🟢',
     medium: '🟡',
@@ -82,22 +81,22 @@ export async function notifyChanges(notifications: NotificationMessage[]): Promi
   // Log all notifications to DB (idempotent)
   for (const notif of loggedNotifications) {
     const hash = hashObject(notif);
-    const existing = await prisma.notificationLog.findFirst({
-      where: {
-        message: notif.message,
-      },
-    });
+    const { data: existing } = await supabase
+      .from('NotificationLog')
+      .select('id')
+      .eq('message', notif.message)
+      .maybeSingle();
 
     if (!existing) {
-      await prisma.notificationLog.create({
-        data: {
-          entityType: 'SyncNotification',
-          entityId: hash,
-          notificationType: 'sent',
-          message: notif.message,
-          sent,
-        },
+      const { error } = await supabase.from('NotificationLog').insert({
+        id: randomUUID(),
+        entityType: 'SyncNotification',
+        entityId: hash,
+        notificationType: 'sent',
+        message: notif.message,
+        sent,
       });
+      if (error) logger.error('Failed to log notification', error);
       logger.log(`✓ Logged notification: ${notif.title}`);
     } else {
       logger.debug(`Notification already logged: ${notif.title}`);

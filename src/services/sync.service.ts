@@ -1,4 +1,5 @@
 import { BrowserContext } from 'playwright';
+import { randomUUID } from 'crypto';
 import { supabase } from '../db/supabase';
 import { ensureAuthenticated } from '../scraper/auth';
 import { scrapeDashboard } from '../scraper/dashboard.scraper';
@@ -61,6 +62,7 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
         const { error: createError } = await supabase
           .from('Course')
           .insert({
+            id: randomUUID(),
             externalId: course.externalId,
             name: course.name,
             url: course.url,
@@ -125,6 +127,7 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
             const { error: createError } = await supabase
               .from('Activity')
               .insert({
+                id: randomUUID(),
                 externalId: activity.externalId,
                 courseId: savedCourse.id,
                 title: activity.title,
@@ -176,6 +179,7 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
             const { error: createError } = await supabase
               .from('Material')
               .insert({
+                id: randomUUID(),
                 externalId: material.externalId,
                 courseId: savedCourse.id,
                 title: material.title,
@@ -232,6 +236,7 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
         const { error: createError } = await supabase
           .from('CalendarEvent')
           .insert({
+            id: randomUUID(),
             externalId: event.externalId,
             courseId: event.courseId,
             title: event.title,

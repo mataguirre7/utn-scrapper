@@ -1,4 +1,4 @@
-import { getPrisma } from '../db/prisma';
+import { supabase } from '../db/supabase';
 import { hashObject } from '../utils/hash';
 import { ScrapedCourse, ScrapedActivity, ScrapedMaterial, ScrapedCalendarEvent } from '../scraper/types';
 
@@ -11,12 +11,12 @@ export interface Change {
 }
 
 export async function detectCourseChanges(scrapedCourses: ScrapedCourse[]): Promise<Change[]> {
-  const prisma = getPrisma();
   const changes: Change[] = [];
 
   // Get existing courses for comparison
-  const existingCourses = await prisma.course.findMany();
-  const existingMap = new Map(existingCourses.map((c: any) => [c.externalId, c]));
+  const { data: existingCourses, error } = await supabase.from('Course').select('externalId, rawHash');
+  if (error) throw error;
+  const existingMap = new Map((existingCourses || []).map((c: any) => [c.externalId, c]));
 
   for (const scraped of scrapedCourses) {
     // Hash used for idempotent change detection (SHA256 of entire object)
@@ -48,11 +48,12 @@ export async function detectCourseChanges(scrapedCourses: ScrapedCourse[]): Prom
 }
 
 export async function detectActivityChanges(activities: ScrapedActivity[]): Promise<Change[]> {
-  const prisma = getPrisma();
   const changes: Change[] = [];
 
+  const { data: existingActivities, error } = await supabase.from('Activity').select('externalId, rawHash, title, dueDate, description');
+  if (error) throw error;
   const existingMap = new Map(
-    (await prisma.activity.findMany()).map((a: any) => [a.externalId, a])
+    (existingActivities || []).map((a: any) => [a.externalId, a])
   );
 
   for (const scraped of activities) {
@@ -87,11 +88,12 @@ export async function detectActivityChanges(activities: ScrapedActivity[]): Prom
 }
 
 export async function detectMaterialChanges(materials: ScrapedMaterial[]): Promise<Change[]> {
-  const prisma = getPrisma();
   const changes: Change[] = [];
 
+  const { data: existingMaterials, error } = await supabase.from('Material').select('externalId, rawHash, title');
+  if (error) throw error;
   const existingMap = new Map(
-    (await prisma.material.findMany()).map((m: any) => [m.externalId, m])
+    (existingMaterials || []).map((m: any) => [m.externalId, m])
   );
 
   for (const scraped of materials) {
@@ -120,11 +122,12 @@ export async function detectMaterialChanges(materials: ScrapedMaterial[]): Promi
 }
 
 export async function detectEventChanges(events: ScrapedCalendarEvent[]): Promise<Change[]> {
-  const prisma = getPrisma();
   const changes: Change[] = [];
 
+  const { data: existingEvents, error } = await supabase.from('CalendarEvent').select('externalId, rawHash, title');
+  if (error) throw error;
   const existingMap = new Map(
-    (await prisma.calendarEvent.findMany()).map((e: any) => [e.externalId, e])
+    (existingEvents || []).map((e: any) => [e.externalId, e])
   );
 
   for (const scraped of events) {

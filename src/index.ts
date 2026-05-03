@@ -51,7 +51,6 @@ async function startWatcher(): Promise<void> {
   // Keep process alive
   process.on('SIGINT', async () => {
     logger.log('\n👋 Shutting down...');
-    await disconnectPrisma();
     process.exit(0);
   });
 }
