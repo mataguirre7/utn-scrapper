@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Course {
+  id         String  @id @default(cuid())
+  externalId String  @unique
+  name       String
+  url        String
+  active     Boolean @default(true)
+  rawHash    String
+
+  activities     Activity[]
+  materials      Material[]
+  calendarEvents CalendarEvent[]
+
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Activity {
+  id         String @id @default(cuid())
+  externalId String
+  courseId   String
+  course     Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  title       String
+  type        String // task, quiz, forum, resource, etc
+  url         String?
+  description String?
+  dueDate     DateTime?
+  status      String    @default("pending") // pending, submitted, completed
+  rawHash     String
+
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([externalId, courseId])
+}
+
+model Material {
+  id         String @id @default(cuid())
+  externalId String
+  courseId   String
+  course     Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  title   String
+  type    String // pdf, url, file, folder, etc
+  url     String?
+  rawHash String
+
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([externalId, courseId])
+}
+
+model CalendarEvent {
+  id         String  @id @default(cuid())
+  externalId String
+  courseId   String?
+  course     Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  title     String
+  url       String?
+  startDate DateTime?
+  dueDate   DateTime?
+  rawHash   String
+
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([externalId])
+}
+
+model NotificationLog {
+  id               String  @id @default(cuid())
+  entityType       String // Course, Activity, Material, CalendarEvent
+  entityId         String
+  notificationType String // new, updated, dueSoon, etc
+  message          String
+  sent             Boolean @default(true)
+
+  sentAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+}
