@@ -10,6 +10,7 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterYear2026, setFilterYear2026] = useState(false);
 
   useEffect(() => {
     async function loadCourses() {
@@ -23,12 +24,25 @@ export default function CoursesPage() {
       }
     }
 
+    // Load filter from localStorage
+    const saved = localStorage.getItem('courseFilterYear2026');
+    if (saved) {
+      setFilterYear2026(JSON.parse(saved));
+    }
+
     loadCourses();
   }, []);
 
-  const filtered = courses.filter(c =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Save filter to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('courseFilterYear2026', JSON.stringify(filterYear2026));
+  }, [filterYear2026]);
+
+  const filtered = courses.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesYear = !filterYear2026 || c.name.includes('2026');
+    return matchesSearch && matchesYear;
+  });
 
   if (loading) return <div>Cargando cursos...</div>;
 
@@ -36,13 +50,24 @@ export default function CoursesPage() {
     <div className="space-y-6">
       <h1 className="text-4xl font-bold">Cursos</h1>
 
-      <input
-        type="text"
-        placeholder="Buscar cursos..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full px-4 py-2 border rounded-lg"
-      />
+      <div className="space-y-3">
+        <input
+          type="text"
+          placeholder="Buscar cursos..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-2 border rounded-lg"
+        />
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={filterYear2026}
+            onChange={(e) => setFilterYear2026(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="text-sm font-medium">Solo cursos 2026</span>
+        </label>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map(course => (
