@@ -6,12 +6,14 @@ import Link from 'next/link';
 
 interface Task {
   id: string;
+  activityId: string;
+  activityTitle: string;
   title: string;
   description?: string;
-  type: string;
+  type?: string;
   dueDate: Date | null;
-  status: string;
-  url: string;
+  status?: string;
+  url?: string;
   courseName: string;
   courseId: string;
   materials: Array<{ title: string; type: string; url?: string }>;
@@ -151,8 +153,8 @@ function TaskCard({ task }: { task: Task }) {
     <div className="bg-white border rounded-lg p-4 hover:shadow-lg transition">
       <div className="flex justify-between items-start gap-4">
         <div className="flex-1">
+          <p className="text-xs text-gray-500 mb-1">{task.courseName} / {task.activityTitle}</p>
           <h3 className="font-bold text-lg mb-1">{task.title}</h3>
-          <p className="text-sm text-gray-600 mb-2">{task.courseName}</p>
 
           {task.description && (
             <p className="text-sm text-gray-700 mb-3">{task.description}</p>

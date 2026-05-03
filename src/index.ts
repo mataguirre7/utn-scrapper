@@ -22,6 +22,7 @@ async function runSync(): Promise<void> {
     logger.log(`\n📊 Sync Results (${duration}s):`);
     logger.log(`  Courses: ${result.coursesFound}`);
     logger.log(`  Activities: ${result.activitiesFound}`);
+    logger.log(`  Tasks: ${result.tasksFound}`);
     logger.log(`  Materials: ${result.materialsFound}`);
     logger.log(`  Events: ${result.eventsFound}`);
 

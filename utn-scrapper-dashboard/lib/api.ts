@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Course, Activity, Material, CalendarEvent, NotificationLog, CourseDetail } from './types';
+import { Course, Activity, Material, CalendarEvent, NotificationLog, CourseDetail, Task } from './types';
 
 export const api = {
   courses: {
@@ -115,29 +115,32 @@ export const api = {
       const future = new Date();
       future.setDate(future.getDate() + days);
 
-      const { data: activities, error } = await supabase
-        .from('Activity')
-        .select('*, Course(name, externalId)')
+      // Fetch tasks with their activities and courses
+      const { data: dbTasks, error } = await supabase
+        .from('Task')
+        .select('*, Activity(*, Course(name, externalId, id))')
         .gte('dueDate', now.toISOString())
         .lte('dueDate', future.toISOString())
         .order('dueDate', { ascending: true });
 
       if (error) throw error;
 
-      const tasks = (activities || []).map(a => ({
-        id: a.id,
-        title: a.title,
-        description: a.description,
-        type: a.type,
-        dueDate: a.dueDate ? new Date(a.dueDate) : null,
-        status: a.status,
-        url: a.url,
-        courseName: (a.Course as any)?.name || 'Unknown',
-        courseId: a.courseId,
+      const tasks = (dbTasks || []).map((t: any) => ({
+        id: t.id,
+        activityId: t.activityId,
+        activityTitle: t.Activity?.title || 'Unknown',
+        title: t.title,
+        description: t.description,
+        type: t.type,
+        dueDate: t.dueDate ? new Date(t.dueDate) : null,
+        status: t.status,
+        url: t.url,
+        courseName: t.Activity?.Course?.name || 'Unknown',
+        courseId: t.Activity?.courseId,
       }));
 
       // Get materials for each course
-      const courseIds = [...new Set(tasks.map(t => t.courseId))];
+      const courseIds = [...new Set(tasks.map(t => t.courseId).filter(Boolean))];
       const materialsMap = new Map();
 
       for (const courseId of courseIds) {

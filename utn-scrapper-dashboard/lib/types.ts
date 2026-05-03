@@ -24,6 +24,20 @@ export interface Activity {
   lastSeenAt: string;
 }
 
+export interface Task {
+  id: string;
+  externalId: string;
+  activityId: string;
+  title: string;
+  type?: string;
+  url?: string;
+  description?: string;
+  dueDate?: string;
+  status?: string;
+  firstSeenAt: string;
+  lastSeenAt: string;
+}
+
 export interface Material {
   id: string;
   externalId: string;
