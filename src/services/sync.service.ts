@@ -5,7 +5,6 @@ import { ensureAuthenticated } from '../scraper/auth';
 import { scrapeDashboard } from '../scraper/dashboard.scraper';
 import { scrapeCourseContent } from '../scraper/course.scraper';
 import { scrapeCalendarEvents } from '../scraper/calendar.scraper';
-import { scrapeActivityTasks } from '../scraper/task.scraper';
 import { SyncResult } from '../scraper/types';
 import {
   detectCourseChanges,
@@ -159,67 +158,8 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
             if (updateError) throw updateError;
           }
 
-          // Scrape tasks within this activity
-          const savedActivity = existing || (await supabase
-            .from('Activity')
-            .select('id')
-            .eq('externalId', activity.externalId)
-            .eq('courseId', savedCourse.id)
-            .single()).data;
-
-          if (savedActivity && activity.url) {
-            try {
-              const tasks = await scrapeActivityTasks(page, activity.url, activity.externalId);
-              result.tasksFound += tasks.length;
-
-              for (const task of tasks) {
-                const taskHash = hashObject(task);
-                const { data: existingTasks } = await supabase
-                  .from('Task')
-                  .select()
-                  .eq('externalId', task.externalId)
-                  .limit(1);
-
-                const existingTask = existingTasks && existingTasks.length > 0 ? existingTasks[0] : null;
-
-                if (!existingTask) {
-                  const { error: createError } = await supabase
-                    .from('Task')
-                    .insert({
-                      id: randomUUID(),
-                      externalId: task.externalId,
-                      activityId: savedActivity.id,
-                      title: task.title,
-                      type: task.type,
-                      url: task.url,
-                      description: task.description,
-                      dueDate: task.dueDate,
-                      status: task.status,
-                      rawHash: taskHash,
-                    });
-
-                  if (createError) throw createError;
-                } else if (existingTask.rawHash !== taskHash) {
-                  const { error: updateError } = await supabase
-                    .from('Task')
-                    .update({
-                      title: task.title,
-                      type: task.type,
-                      url: task.url,
-                      description: task.description,
-                      dueDate: task.dueDate,
-                      status: task.status,
-                      rawHash: taskHash,
-                    })
-                    .eq('id', existingTask.id);
-
-                  if (updateError) throw updateError;
-                }
-              }
-            } catch (error) {
-              logger.warn(`Failed to scrape tasks for activity ${activity.externalId}: ${error}`);
-            }
-          }
+          // TODO: Task scraping disabled - selectors need refinement
+          // Re-enable when CVG HTML structure is understood better
         }
 
         // Detect and save materials
