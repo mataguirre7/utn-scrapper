@@ -8,7 +8,7 @@ import { eventsRouter } from './routes/events';
 import { notificationsRouter } from './routes/notifications';
 
 const app: Express = express();
-const PORT = process.env.API_PORT || 3001;
+const PORT = process.env.PORT || process.env.API_PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
@@ -20,9 +20,9 @@ app.use('/api/events', eventsRouter);
 app.use('/api/notifications', notificationsRouter);
 
 app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 app.listen(PORT, () => {
-  logger.log(`🚀 API server running on http://localhost:${PORT}`);
+  logger.log(`🚀 API server running on port ${PORT}`);
 });
