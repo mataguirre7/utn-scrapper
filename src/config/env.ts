@@ -11,10 +11,11 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   TELEGRAM_BOT_TOKEN: z.string().min(1, 'TELEGRAM_BOT_TOKEN is required'),
   TELEGRAM_CHAT_ID: z.string().min(1, 'TELEGRAM_CHAT_ID is required'),
+  SUPABASE_URL: z.string().url('SUPABASE_URL must be a valid URL'),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
   SCRAPE_INTERVAL_MINUTES: z.coerce.number().positive().default(60),
   DEBUG_MODE: z.enum(['true', 'false']).default('false').transform(v => v === 'true'),
   PLAYWRIGHT_HEADLESS: z.enum(['true', 'false']).default('true').transform(v => v === 'true'),
-  DATABASE_URL: z.string().default('file:./prisma/dev.db'),
 });
 
 type Env = z.infer<typeof envSchema>;
@@ -45,6 +46,10 @@ export const config = {
     botToken: env.TELEGRAM_BOT_TOKEN,
     chatId: env.TELEGRAM_CHAT_ID,
   },
+  supabase: {
+    url: env.SUPABASE_URL,
+    serviceKey: env.SUPABASE_SERVICE_ROLE_KEY,
+  },
   scraping: {
     intervalMinutes: Math.floor(env.SCRAPE_INTERVAL_MINUTES),
   },
@@ -55,9 +60,6 @@ export const config = {
   debug: {
     mode: env.DEBUG_MODE,
     headless: env.PLAYWRIGHT_HEADLESS,
-  },
-  database: {
-    url: env.DATABASE_URL,
   },
 };
 

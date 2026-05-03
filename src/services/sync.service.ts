@@ -1,5 +1,5 @@
 import { BrowserContext } from 'playwright';
-import { getPrisma } from '../db/prisma';
+import { supabase } from '../db/supabase';
 import { ensureAuthenticated } from '../scraper/auth';
 import { scrapeDashboard } from '../scraper/dashboard.scraper';
 import { scrapeCourseContent } from '../scraper/course.scraper';
@@ -18,7 +18,6 @@ import { hashObject } from '../utils/hash';
 import { logger } from '../utils/logger';
 
 export async function performSync(browserContext: BrowserContext): Promise<SyncResult> {
-  const prisma = getPrisma();
   const result: SyncResult = {
     coursesFound: 0,
     activitiesFound: 0,
@@ -48,28 +47,38 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
 
     for (const course of scrapedCourses) {
       const hash = hashObject(course);
-      const existing = await prisma.course.findUnique({
-        where: { externalId: course.externalId },
-      });
+      const { data: existing, error: findError } = await supabase
+        .from('Course')
+        .select()
+        .eq('externalId', course.externalId)
+        .single();
+
+      if (findError && findError.code !== 'PGRST116') {
+        throw findError;
+      }
 
       if (!existing) {
-        await prisma.course.create({
-          data: {
+        const { error: createError } = await supabase
+          .from('Course')
+          .insert({
             externalId: course.externalId,
             name: course.name,
             url: course.url,
             rawHash: hash,
-          },
-        });
+          });
+
+        if (createError) throw createError;
       } else if (existing.rawHash !== hash) {
-        await prisma.course.update({
-          where: { id: existing.id },
-          data: {
+        const { error: updateError } = await supabase
+          .from('Course')
+          .update({
             name: course.name,
             url: course.url,
             rawHash: hash,
-          },
-        });
+          })
+          .eq('id', existing.id);
+
+        if (updateError) throw updateError;
       }
     }
 
@@ -85,11 +94,13 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
         logger.log(`    → ${activities.length} activities, ${materials.length} materials`);
 
         // Get internal course ID from database
-        const savedCourse = await prisma.course.findUnique({
-          where: { externalId: course.externalId },
-        });
+        const { data: savedCourse, error: courseError } = await supabase
+          .from('Course')
+          .select()
+          .eq('externalId', course.externalId)
+          .single();
 
-        if (!savedCourse) {
+        if (courseError || !savedCourse) {
           throw new Error(`Course not found in database: ${course.externalId}`);
         }
 
@@ -99,16 +110,21 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
 
         for (const activity of activities) {
           const hash = hashObject(activity);
-          const existing = await prisma.activity.findFirst({
-            where: {
-              externalId: activity.externalId,
-              courseId: savedCourse.id,
-            },
-          });
+          const { data: existingActivities, error: findActivityError } = await supabase
+            .from('Activity')
+            .select()
+            .eq('externalId', activity.externalId)
+            .eq('courseId', savedCourse.id)
+            .limit(1);
+
+          if (findActivityError) throw findActivityError;
+
+          const existing = existingActivities && existingActivities.length > 0 ? existingActivities[0] : null;
 
           if (!existing) {
-            await prisma.activity.create({
-              data: {
+            const { error: createError } = await supabase
+              .from('Activity')
+              .insert({
                 externalId: activity.externalId,
                 courseId: savedCourse.id,
                 title: activity.title,
@@ -118,12 +134,13 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
                 dueDate: activity.dueDate,
                 status: activity.status,
                 rawHash: hash,
-              },
-            });
+              });
+
+            if (createError) throw createError;
           } else if (existing.rawHash !== hash) {
-            await prisma.activity.update({
-              where: { id: existing.id },
-              data: {
+            const { error: updateError } = await supabase
+              .from('Activity')
+              .update({
                 title: activity.title,
                 type: activity.type,
                 url: activity.url,
@@ -131,8 +148,10 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
                 dueDate: activity.dueDate,
                 status: activity.status,
                 rawHash: hash,
-              },
-            });
+              })
+              .eq('id', existing.id);
+
+            if (updateError) throw updateError;
           }
         }
 
@@ -142,34 +161,42 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
 
         for (const material of materials) {
           const hash = hashObject(material);
-          const existing = await prisma.material.findFirst({
-            where: {
-              externalId: material.externalId,
-              courseId: savedCourse.id,
-            },
-          });
+          const { data: existingMaterials, error: findMaterialError } = await supabase
+            .from('Material')
+            .select()
+            .eq('externalId', material.externalId)
+            .eq('courseId', savedCourse.id)
+            .limit(1);
+
+          if (findMaterialError) throw findMaterialError;
+
+          const existing = existingMaterials && existingMaterials.length > 0 ? existingMaterials[0] : null;
 
           if (!existing) {
-            await prisma.material.create({
-              data: {
+            const { error: createError } = await supabase
+              .from('Material')
+              .insert({
                 externalId: material.externalId,
                 courseId: savedCourse.id,
                 title: material.title,
                 type: material.type,
                 url: material.url,
                 rawHash: hash,
-              },
-            });
+              });
+
+            if (createError) throw createError;
           } else if (existing.rawHash !== hash) {
-            await prisma.material.update({
-              where: { id: existing.id },
-              data: {
+            const { error: updateError } = await supabase
+              .from('Material')
+              .update({
                 title: material.title,
                 type: material.type,
                 url: material.url,
                 rawHash: hash,
-              },
-            });
+              })
+              .eq('id', existing.id);
+
+            if (updateError) throw updateError;
           }
         }
       } catch (error) {
@@ -191,13 +218,20 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
 
     for (const event of events) {
       const hash = hashObject(event);
-      const existing = await prisma.calendarEvent.findUnique({
-        where: { externalId: event.externalId },
-      });
+      const { data: existing, error: findError } = await supabase
+        .from('CalendarEvent')
+        .select()
+        .eq('externalId', event.externalId)
+        .single();
+
+      if (findError && findError.code !== 'PGRST116') {
+        throw findError;
+      }
 
       if (!existing) {
-        await prisma.calendarEvent.create({
-          data: {
+        const { error: createError } = await supabase
+          .from('CalendarEvent')
+          .insert({
             externalId: event.externalId,
             courseId: event.courseId,
             title: event.title,
@@ -205,20 +239,23 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
             startDate: event.startDate,
             dueDate: event.dueDate,
             rawHash: hash,
-          },
-        });
+          });
+
+        if (createError) throw createError;
       } else if (existing.rawHash !== hash) {
-        await prisma.calendarEvent.update({
-          where: { id: existing.id },
-          data: {
+        const { error: updateError } = await supabase
+          .from('CalendarEvent')
+          .update({
             courseId: event.courseId,
             title: event.title,
             url: event.url,
             startDate: event.startDate,
             dueDate: event.dueDate,
             rawHash: hash,
-          },
-        });
+          })
+          .eq('id', existing.id);
+
+        if (updateError) throw updateError;
       }
     }
 
@@ -228,16 +265,17 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
 
       // Build notification message
       const changesHash = hashObject(allChanges);
-      const lastNotif = await prisma.notificationLog.findFirst({
-        where: {
-          entityId: changesHash,
-        },
-        orderBy: {
-          sentAt: 'desc',
-        },
-      });
+      const { data: notificationLogs, error: notifError } = await supabase
+        .from('NotificationLog')
+        .select()
+        .eq('entityId', changesHash)
+        .order('sentAt', { ascending: false })
+        .limit(1);
 
-      const alreadyNotified = lastNotif && (Date.now() - lastNotif.sentAt.getTime()) < 3600000; // 1 hour
+      if (notifError) throw notifError;
+
+      const lastNotif = notificationLogs && notificationLogs.length > 0 ? notificationLogs[0] : null;
+      const alreadyNotified = lastNotif && (Date.now() - new Date(lastNotif.sentAt).getTime()) < 3600000; // 1 hour
 
       if (!alreadyNotified) {
         logger.log('Preparing and sending notifications...');
@@ -257,7 +295,7 @@ export async function performSync(browserContext: BrowserContext): Promise<SyncR
 
         await notifyChanges(notifications);
       } else {
-        logger.log(`⊘ Skipping duplicate notification (last sent ${Math.floor((Date.now() - lastNotif!.sentAt.getTime()) / 60000)} min ago)`);
+        logger.log(`⊘ Skipping duplicate notification (last sent ${Math.floor((Date.now() - new Date(lastNotif!.sentAt).getTime()) / 60000)} min ago)`);
       }
     } else {
       logger.log('No changes detected');

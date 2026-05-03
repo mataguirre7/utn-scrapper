@@ -4,7 +4,6 @@ import { chromium } from 'playwright';
 import { ensureAuthenticated } from './scraper/auth';
 import { enableDebugMode, saveHtmlSnapshot, saveScreenshot } from './scraper/debug.service';
 import { performSync } from './services/sync.service';
-import { disconnectPrisma } from './db/prisma';
 import { config } from './config/env';
 import { logger } from './utils/logger';
 
@@ -86,7 +85,6 @@ async function debugBrowser(): Promise<void> {
     process.on('SIGINT', async () => {
       logger.log('\n👋 Closing...');
       await browser.close();
-      await disconnectPrisma();
       process.exit(0);
     });
   } catch (error) {
@@ -102,7 +100,6 @@ async function main(): Promise<void> {
   switch (COMMAND) {
     case 'sync':
       await runSync();
-      await disconnectPrisma();
       process.exit(0);
       break;
 
