@@ -8,12 +8,7 @@
     "build": "tsc",
     "start": "node dist/index.js start",
     "sync": "node dist/index.js sync",
-    "debug:browser": "node dist/index.js debug:browser",
-    "api": "ts-node src/api/server.ts",
-    "api:build": "tsc && node dist/api/server.js",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio",
-    "prisma:generate": "prisma generate"
+    "debug:browser": "node dist/index.js debug:browser"
   },
   "keywords": [],
   "author": "",
